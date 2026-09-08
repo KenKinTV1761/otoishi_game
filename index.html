@@ -148,6 +148,9 @@
 </div>
 
 <script>
+// 設定済みのGASウェブアプリURL
+const GAS_COUNT_URL = "https://script.google.com/macros/s/AKfycbxm5zOL-GzQf3PLyZhrl8O5-XHFcZDkNCZU63Lg0142FEnkI-Y7APuU09aZ_Zt8WHKl/exec";
+
 const HIRAGANA = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん";
 const KATAKANA = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン";
 
@@ -169,7 +172,7 @@ const SECRET_WORDS = [
   "ヒミツノコウテイ"
 ];
 
-// 濁音マップ（清音 -> 濁音）
+// 濁音マップ
 const DAKUTEN_MAP_H = {
   "か":"が","き":"ぎ","く":"ぐ","け":"げ","こ":"ご",
   "さ":"ざ","し":"じ","す":"ず","せ":"ぜ","そ":"ぞ",
@@ -183,11 +186,11 @@ const DAKUTEN_MAP_K = {
   "ハ":"バ","ヒ":"ビ","フ":"ブ","ヘ":"ベ","ホ":"ボ"
 };
 
-// 半濁音マップ（清音 -> 半濁音）
+// 半濁音マップ
 const HANDAKUTEN_MAP_H = { "は":"ぱ","ひ":"ぴ","ふ":"ぷ","へ":"ぺ","ほ":"ぽ" };
 const HANDAKUTEN_MAP_K = { "ハ":"パ","ヒ":"ピ","フ":"プ","ヘ":"ペ","ホ":"ポ" };
 
-// 小文字マップ（清音 -> 小文字）
+// 小文字マップ
 const SMALL_MAP_H = {
   "あ":"ぁ","い":"ぃ","う":"ぅ","え":"ぇ","お":"ぉ",
   "つ":"っ","や":"ゃ","ゆ":"ゅ","よ":"ょ","わ":"ゎ"
@@ -197,18 +200,16 @@ const SMALL_MAP_K = {
   "ツ":"ッ","ヤ":"ャ","ユ":"ュ","ヨ":"ョ","ワ":"ヮ"
 };
 
-// 文字の分解用逆引きマップの生成
+// 文字属性テーブル
 const DECOMPOSE_MAP = {};
 
 function registerChar(char, baseChar, type, script) {
   DECOMPOSE_MAP[char] = { base: baseChar, type: type, script: script };
 }
 
-// 清音の登録
 for (const ch of HIRAGANA) registerChar(ch, ch, "normal", "hiragana");
 for (const ch of KATAKANA) registerChar(ch, ch, "normal", "katakana");
 
-// 濁音・半濁音・小文字の登録
 for (const [b, d] of Object.entries(DAKUTEN_MAP_H)) registerChar(d, b, "dakuten", "hiragana");
 for (const [b, d] of Object.entries(DAKUTEN_MAP_K)) registerChar(d, b, "dakuten", "katakana");
 for (const [b, p] of Object.entries(HANDAKUTEN_MAP_H)) registerChar(p, b, "handakuten", "hiragana");
@@ -216,7 +217,6 @@ for (const [b, p] of Object.entries(HANDAKUTEN_MAP_K)) registerChar(p, b, "handa
 for (const [b, s] of Object.entries(SMALL_MAP_H)) registerChar(s, b, "small", "hiragana");
 for (const [b, s] of Object.entries(SMALL_MAP_K)) registerChar(s, b, "small", "katakana");
 
-// 現在の隠しコマンド発動状態フラグ
 let isSecretMode = false;
 
 // 画面のリセット処理
@@ -227,7 +227,7 @@ function resetDisplay() {
   isSecretMode = false;
 }
 
-// 入力変更時の監視処理
+// 入力変更監視
 function handleInputChange() {
   const input = document.getElementById("targetWord");
   const clearBtn = document.getElementById("clearBtn");
@@ -240,12 +240,18 @@ function handleInputChange() {
   }
 }
 
-// ✕ボタン押下時の処理
+// ✕ボタン押下時
 function clearInput() {
   const input = document.getElementById("targetWord");
   input.value = "";
   handleInputChange();
   input.focus();
+}
+
+// カウント加算送信
+function sendCountLog() {
+  if (!GAS_COUNT_URL) return;
+  fetch(GAS_COUNT_URL, { method: "GET", mode: "no-cors" }).catch(() => {});
 }
 
 function executeShift() {
@@ -255,7 +261,7 @@ function executeShift() {
   const copyBtn = document.getElementById("copyBtn");
   const universeMsg = document.getElementById("universeMsg");
 
-  // 漢字・アルファベット等の判定（ひらがな、カタカナ、長音符「ー」、スペース以外が含まれるか）
+  // 入力文字種チェック
   const invalidCharPattern = /[^ぁ-んァ-ヶー\s]/;
   if (invalidCharPattern.test(input)) {
     document.getElementById("output").value = "ヨクワカリマセン。ヒラガナカ、カタカナデ、オネガイシマス";
@@ -265,13 +271,14 @@ function executeShift() {
     return;
   }
 
-  // 隠しコマンド判定（「プッチ」「ぷっち」「プッチシンプ」「ぷっちしんぷ」）
+  // 実行時カウント送信
+  sendCountLog();
+
+  // 隠しコマンド判定
   const secretKeywords = ["プッチ", "ぷっち", "プッチシンプ", "ぷっちしんぷ"];
   if (secretKeywords.includes(input)) {
     isSecretMode = true;
     document.getElementById("output").value = SECRET_WORDS.join("\n");
-    
-    // 隠しコマンド専用テキストへ変更
     copyBtn.innerText = "結果をC-MOON";
     copyBtn.style.display = "block";
     universeMsg.innerText = "これで君の世界へ共に旅立てるぞッ！";
@@ -304,7 +311,6 @@ function executeShift() {
   }
 
   const lines = [];
-  
   for (let step = 0; step <= 46; step++) {
     let shifted = "";
     for (const item of parsedChars) {
