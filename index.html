@@ -134,7 +134,7 @@
   
   <div class="input-group">
     <div class="input-wrapper">
-      <input type="text" id="targetWord" placeholder="単語を入力 (例: オトイシアキラ)" autocomplete="off" oninput="toggleClearBtn()">
+      <input type="text" id="targetWord" placeholder="単語を入力 (例: オトイシアキラ)" autocomplete="off" oninput="handleInputChange()">
       <span id="clearBtn" class="clear-btn" onclick="clearInput()">✕</span>
     </div>
     <button class="btn-main" onclick="executeShift()">一巡</button>
@@ -198,16 +198,31 @@ for (const [b, p] of Object.entries(HANDAKUTEN_MAP_K)) registerChar(p, b, "handa
 for (const [b, s] of Object.entries(SMALL_MAP_H)) registerChar(s, b, "small", "hiragana");
 for (const [b, s] of Object.entries(SMALL_MAP_K)) registerChar(s, b, "small", "katakana");
 
-function toggleClearBtn() {
-  const input = document.getElementById("targetWord");
-  const clearBtn = document.getElementById("clearBtn");
-  clearBtn.style.display = input.value.length > 0 ? "flex" : "none";
+// 画面のリセット処理
+function resetDisplay() {
+  document.getElementById("output").value = "";
+  document.getElementById("copyBtn").style.display = "none";
+  document.getElementById("universeMsg").style.display = "none";
 }
 
+// 入力変更時の監視処理
+function handleInputChange() {
+  const input = document.getElementById("targetWord");
+  const clearBtn = document.getElementById("clearBtn");
+  
+  if (input.value.length > 0) {
+    clearBtn.style.display = "flex";
+  } else {
+    clearBtn.style.display = "none";
+    resetDisplay(); // 入力が空になったら初期化
+  }
+}
+
+// ✕ボタン押下時の処理
 function clearInput() {
   const input = document.getElementById("targetWord");
   input.value = "";
-  toggleClearBtn();
+  handleInputChange();
   input.focus();
 }
 
@@ -215,7 +230,6 @@ function executeShift() {
   const input = document.getElementById("targetWord").value.trim();
   if (!input) return;
 
-  // 1文字ずつ属性を解析
   const parsedChars = [];
   for (const char of input) {
     if (DECOMPOSE_MAP[char]) {
@@ -241,7 +255,6 @@ function executeShift() {
     let shifted = "";
     for (const item of parsedChars) {
       if (item.baseIndex === -1) {
-        // 長音「ー」や記号などはそのまま
         shifted += item.raw;
         continue;
       }
@@ -249,7 +262,6 @@ function executeShift() {
       const table = item.script === "hiragana" ? HIRAGANA : KATAKANA;
       const targetBase = table[(item.baseIndex + step) % 46];
 
-      // 属性（濁音・半濁音・小文字）の再適用
       let finalChar = targetBase;
       if (item.type === "dakuten") {
         const dakutenMap = item.script === "hiragana" ? DAKUTEN_MAP_H : DAKUTEN_MAP_K;
