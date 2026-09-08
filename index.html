@@ -34,9 +34,15 @@
       gap: 8px;
       margin-bottom: 12px;
     }
-    input[type="text"] {
+    .input-wrapper {
+      position: relative;
       flex: 1;
-      padding: 12px;
+      display: flex;
+      align-items: center;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 36px 12px 12px;
       font-size: 16px;
       border: 1px solid #ccc;
       border-radius: 8px;
@@ -45,7 +51,25 @@
     input[type="text"]:focus {
       border-color: #007aff;
     }
-    button {
+    .clear-btn {
+      position: absolute;
+      right: 10px;
+      width: 22px;
+      height: 22px;
+      background-color: #ccc;
+      color: #fff;
+      border-radius: 50%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .clear-btn:hover {
+      background-color: #999;
+    }
+    .btn-main {
       padding: 12px 16px;
       font-size: 15px;
       font-weight: bold;
@@ -55,15 +79,39 @@
       border-radius: 8px;
       cursor: pointer;
       touch-action: manipulation;
+      white-space: nowrap;
     }
-    button:active {
+    .btn-main:active {
       opacity: 0.8;
     }
     .btn-copy {
       width: 100%;
       background-color: #34c759;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
       display: none;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: bold;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .btn-copy:active {
+      opacity: 0.8;
+    }
+    .universe-message {
+      display: none;
+      text-align: center;
+      font-weight: bold;
+      color: #5856d6;
+      font-size: 15px;
+      margin-bottom: 12px;
+      animation: fadeIn 0.4s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     textarea {
       width: 100%;
@@ -85,24 +133,42 @@
   <h1>オトイシアキラゲーム</h1>
   
   <div class="input-group">
-    <input type="text" id="targetWord" placeholder="単語を入力 (例: オトイシアキラ)" autocomplete="off">
-    <button onclick="executeShift()">変換</button>
+    <div class="input-wrapper">
+      <input type="text" id="targetWord" placeholder="単語を入力 (例: オトイシアキラ)" autocomplete="off" oninput="toggleClearBtn()">
+      <span id="clearBtn" class="clear-btn" onclick="clearInput()">✕</span>
+    </div>
+    <button class="btn-main" onclick="executeShift()">一巡</button>
   </div>
 
-  <button id="copyBtn" class="btn-copy" onclick="copyResult()">CSVをコピー</button>
+  <button id="copyBtn" class="btn-copy" onclick="copyResult()">結果をラバーソール</button>
   
-  <textarea id="output" readonly placeholder="ここにCSVが出力されます"></textarea>
+  <div id="universeMsg" class="universe-message">『宇宙』は一巡したッ！</div>
+  
+  <textarea id="output" readonly placeholder="ここに結果が出力されます"></textarea>
 </div>
 
 <script>
 const HIRAGANA = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん";
 const KATAKANA = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン";
 
+function toggleClearBtn() {
+  const input = document.getElementById("targetWord");
+  const clearBtn = document.getElementById("clearBtn");
+  clearBtn.style.display = input.value.length > 0 ? "flex" : "none";
+}
+
+function clearInput() {
+  const input = document.getElementById("targetWord");
+  input.value = "";
+  toggleClearBtn();
+  input.focus();
+}
+
 function executeShift() {
   const input = document.getElementById("targetWord").value.trim();
   if (!input) return;
 
-  const lines = ["回数,文字列"];
+  const lines = [];
   
   for (let step = 0; step <= 46; step++) {
     let shifted = "";
@@ -111,13 +177,10 @@ function executeShift() {
       const kIdx = KATAKANA.indexOf(char);
 
       if (hIdx !== -1) {
-        // ひらがなはひらがなのまま巡回
         shifted += HIRAGANA[(hIdx + step) % 46];
       } else if (kIdx !== -1) {
-        // カタカナはカタカナのまま巡回
         shifted += KATAKANA[(kIdx + step) % 46];
       } else {
-        // 長音「ー」や記号などはそのまま維持
         shifted += char;
       }
     }
@@ -128,6 +191,7 @@ function executeShift() {
   const resultCsv = lines.join("\n");
   document.getElementById("output").value = resultCsv;
   document.getElementById("copyBtn").style.display = "block";
+  document.getElementById("universeMsg").style.display = "block";
 }
 
 function copyResult() {
@@ -137,7 +201,7 @@ function copyResult() {
   navigator.clipboard.writeText(output.value).then(() => {
     const copyBtn = document.getElementById("copyBtn");
     const originalText = copyBtn.innerText;
-    copyBtn.innerText = "コピー完了！";
+    copyBtn.innerText = "ラバーソール完了！";
     setTimeout(() => {
       copyBtn.innerText = originalText;
     }, 1500);
