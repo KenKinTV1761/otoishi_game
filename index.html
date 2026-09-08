@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>五十音シフト変換</title>
+  <title>オトイシアキラゲーム</title>
   <style>
     * {
       box-sizing: border-box;
@@ -82,10 +82,10 @@
 <body>
 
 <div class="container">
-  <h1>五十音巡回シフト生成</h1>
+  <h1>オトイシアキラゲーム</h1>
   
   <div class="input-group">
-    <input type="text" id="targetWord" placeholder="単語を入力 (例: おやすみ)" autocomplete="off">
+    <input type="text" id="targetWord" placeholder="単語を入力 (例: オトイシアキラ)" autocomplete="off">
     <button onclick="executeShift()">変換</button>
   </div>
 
@@ -95,7 +95,8 @@
 </div>
 
 <script>
-const GOJUON = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん";
+const HIRAGANA = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん";
+const KATAKANA = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン";
 
 function executeShift() {
   const input = document.getElementById("targetWord").value.trim();
@@ -106,11 +107,18 @@ function executeShift() {
   for (let step = 0; step <= 46; step++) {
     let shifted = "";
     for (const char of input) {
-      const idx = GOJUON.indexOf(char);
-      if (idx !== -1) {
-        shifted += GOJUON[(idx + step) % 46];
+      const hIdx = HIRAGANA.indexOf(char);
+      const kIdx = KATAKANA.indexOf(char);
+
+      if (hIdx !== -1) {
+        // ひらがなはひらがなのまま巡回
+        shifted += HIRAGANA[(hIdx + step) % 46];
+      } else if (kIdx !== -1) {
+        // カタカナはカタカナのまま巡回
+        shifted += KATAKANA[(kIdx + step) % 46];
       } else {
-        shifted += char; // 長音記号「ー」などは維持
+        // 長音「ー」や記号などはそのまま維持
+        shifted += char;
       }
     }
     const countStr = String(step).padStart(2, "0");
@@ -125,7 +133,7 @@ function executeShift() {
 function copyResult() {
   const output = document.getElementById("output");
   output.select();
-  output.setSelectionRange(0, 99999); // スマホ対応
+  output.setSelectionRange(0, 99999);
   navigator.clipboard.writeText(output.value).then(() => {
     const copyBtn = document.getElementById("copyBtn");
     const originalText = copyBtn.innerText;
