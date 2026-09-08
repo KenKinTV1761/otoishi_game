@@ -216,11 +216,15 @@ for (const [b, p] of Object.entries(HANDAKUTEN_MAP_K)) registerChar(p, b, "handa
 for (const [b, s] of Object.entries(SMALL_MAP_H)) registerChar(s, b, "small", "hiragana");
 for (const [b, s] of Object.entries(SMALL_MAP_K)) registerChar(s, b, "small", "katakana");
 
+// 現在の隠しコマンド発動状態フラグ
+let isSecretMode = false;
+
 // 画面のリセット処理
 function resetDisplay() {
   document.getElementById("output").value = "";
   document.getElementById("copyBtn").style.display = "none";
   document.getElementById("universeMsg").style.display = "none";
+  isSecretMode = false;
 }
 
 // 入力変更時の監視処理
@@ -248,22 +252,37 @@ function executeShift() {
   const input = document.getElementById("targetWord").value.trim();
   if (!input) return;
 
+  const copyBtn = document.getElementById("copyBtn");
+  const universeMsg = document.getElementById("universeMsg");
+
   // 漢字・アルファベット等の判定（ひらがな、カタカナ、長音符「ー」、スペース以外が含まれるか）
   const invalidCharPattern = /[^ぁ-んァ-ヶー\s]/;
   if (invalidCharPattern.test(input)) {
     document.getElementById("output").value = "ヨクワカリマセン。ヒラガナカ、カタカナデ、オネガイシマス";
-    document.getElementById("copyBtn").style.display = "none";
-    document.getElementById("universeMsg").style.display = "none";
+    copyBtn.style.display = "none";
+    universeMsg.style.display = "none";
+    isSecretMode = false;
     return;
   }
 
-  // 隠しコマンド判定（「プッチ」または「ぷっち」）
-  if (input === "プッチ" || input === "ぷっち") {
+  // 隠しコマンド判定（「プッチ」「ぷっち」「プッチシンプ」「ぷっちしんぷ」）
+  const secretKeywords = ["プッチ", "ぷっち", "プッチシンプ", "ぷっちしんぷ"];
+  if (secretKeywords.includes(input)) {
+    isSecretMode = true;
     document.getElementById("output").value = SECRET_WORDS.join("\n");
-    document.getElementById("copyBtn").style.display = "block";
-    document.getElementById("universeMsg").style.display = "block";
+    
+    // 隠しコマンド専用テキストへ変更
+    copyBtn.innerText = "結果をC-MOON";
+    copyBtn.style.display = "block";
+    universeMsg.innerText = "これで君の世界へ共に旅立てるぞッ！";
+    universeMsg.style.display = "block";
     return;
   }
+
+  // 通常モード
+  isSecretMode = false;
+  copyBtn.innerText = "結果をラバーソール";
+  universeMsg.innerText = "『宇宙』は一巡したッ！";
 
   const parsedChars = [];
   for (const char of input) {
@@ -324,8 +343,8 @@ function executeShift() {
 
   const resultCsv = lines.join("\n");
   document.getElementById("output").value = resultCsv;
-  document.getElementById("copyBtn").style.display = "block";
-  document.getElementById("universeMsg").style.display = "block";
+  copyBtn.style.display = "block";
+  universeMsg.style.display = "block";
 }
 
 function copyResult() {
@@ -335,7 +354,7 @@ function copyResult() {
   navigator.clipboard.writeText(output.value).then(() => {
     const copyBtn = document.getElementById("copyBtn");
     const originalText = copyBtn.innerText;
-    copyBtn.innerText = "ラバーソール完了！";
+    copyBtn.innerText = isSecretMode ? "C-MOON完了！" : "ラバーソール完了！";
     setTimeout(() => {
       copyBtn.innerText = originalText;
     }, 1500);
