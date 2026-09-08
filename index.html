@@ -151,6 +151,53 @@
 const HIRAGANA = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん";
 const KATAKANA = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン";
 
+// 濁音マップ（清音 -> 濁音）
+const DAKUTEN_MAP_H = {
+  "か":"が","き":"ぎ","く":"ぐ","け":"げ","こ":"ご",
+  "さ":"ざ","し":"じ","す":"ず","せ":"ぜ","そ":"ぞ",
+  "た":"だ","ち":"ぢ","つ":"づ","て":"で","と":"ど",
+  "は":"ば","ひ":"び","ふ":"ぶ","へ":"べ","ほ":"ぼ"
+};
+const DAKUTEN_MAP_K = {
+  "カ":"ガ","キ":"ギ","ク":"グ","ケ":"ゲ","コ":"ゴ",
+  "サ":"ザ","シ":"ジ","ス":"ズ","セ":"ゼ","ソ":"ゾ",
+  "タ":"ダ","チ":"ヂ","ツ":"ヅ","テ":"デ","ト":"ド",
+  "ハ":"バ","ヒ":"ビ","フ":"ブ","ヘ":"ベ","ホ":"ボ"
+};
+
+// 半濁音マップ（清音 -> 半濁音）
+const HANDAKUTEN_MAP_H = { "は":"ぱ","ひ":"ぴ","ふ":"ぷ","へ":"ぺ","ほ":"ぽ" };
+const HANDAKUTEN_MAP_K = { "ハ":"パ","ヒ":"ピ","フ":"プ","ヘ":"ペ","ホ":"ポ" };
+
+// 小文字マップ（清音 -> 小文字）
+const SMALL_MAP_H = {
+  "あ":"ぁ","い":"ぃ","う":"ぅ","え":"ぇ","お":"ぉ",
+  "つ":"っ","や":"ゃ","ゆ":"ゅ","よ":"ょ","わ":"ゎ"
+};
+const SMALL_MAP_K = {
+  "ア":"ァ","イ":"ィ","ウ":"ゥ","エ":"ェ","オ":"ォ",
+  "ツ":"ッ","ヤ":"ャ","ユ":"ュ","ヨ":"ョ","ワ":"ヮ"
+};
+
+// 文字の分解用逆引きマップの生成
+const DECOMPOSE_MAP = {};
+
+function registerChar(char, baseChar, type, script) {
+  DECOMPOSE_MAP[char] = { base: baseChar, type: type, script: script };
+}
+
+// 清音の登録
+for (const ch of HIRAGANA) registerChar(ch, ch, "normal", "hiragana");
+for (const ch of KATAKANA) registerChar(ch, ch, "normal", "katakana");
+
+// 濁音・半濁音・小文字の登録
+for (const [b, d] of Object.entries(DAKUTEN_MAP_H)) registerChar(d, b, "dakuten", "hiragana");
+for (const [b, d] of Object.entries(DAKUTEN_MAP_K)) registerChar(d, b, "dakuten", "katakana");
+for (const [b, p] of Object.entries(HANDAKUTEN_MAP_H)) registerChar(p, b, "handakuten", "hiragana");
+for (const [b, p] of Object.entries(HANDAKUTEN_MAP_K)) registerChar(p, b, "handakuten", "katakana");
+for (const [b, s] of Object.entries(SMALL_MAP_H)) registerChar(s, b, "small", "hiragana");
+for (const [b, s] of Object.entries(SMALL_MAP_K)) registerChar(s, b, "small", "katakana");
+
 function toggleClearBtn() {
   const input = document.getElementById("targetWord");
   const clearBtn = document.getElementById("clearBtn");
@@ -168,22 +215,62 @@ function executeShift() {
   const input = document.getElementById("targetWord").value.trim();
   if (!input) return;
 
+  // 1文字ずつ属性を解析
+  const parsedChars = [];
+  for (const char of input) {
+    if (DECOMPOSE_MAP[char]) {
+      const meta = DECOMPOSE_MAP[char];
+      const table = meta.script === "hiragana" ? HIRAGANA : KATAKANA;
+      parsedChars.push({
+        baseIndex: table.indexOf(meta.base),
+        type: meta.type,
+        script: meta.script,
+        raw: char
+      });
+    } else {
+      parsedChars.push({
+        baseIndex: -1,
+        raw: char
+      });
+    }
+  }
+
   const lines = [];
   
   for (let step = 0; step <= 46; step++) {
     let shifted = "";
-    for (const char of input) {
-      const hIdx = HIRAGANA.indexOf(char);
-      const kIdx = KATAKANA.indexOf(char);
-
-      if (hIdx !== -1) {
-        shifted += HIRAGANA[(hIdx + step) % 46];
-      } else if (kIdx !== -1) {
-        shifted += KATAKANA[(kIdx + step) % 46];
-      } else {
-        shifted += char;
+    for (const item of parsedChars) {
+      if (item.baseIndex === -1) {
+        // 長音「ー」や記号などはそのまま
+        shifted += item.raw;
+        continue;
       }
+
+      const table = item.script === "hiragana" ? HIRAGANA : KATAKANA;
+      const targetBase = table[(item.baseIndex + step) % 46];
+
+      // 属性（濁音・半濁音・小文字）の再適用
+      let finalChar = targetBase;
+      if (item.type === "dakuten") {
+        const dakutenMap = item.script === "hiragana" ? DAKUTEN_MAP_H : DAKUTEN_MAP_K;
+        if (dakutenMap[targetBase]) {
+          finalChar = dakutenMap[targetBase];
+        }
+      } else if (item.type === "handakuten") {
+        const handakutenMap = item.script === "hiragana" ? HANDAKUTEN_MAP_H : HANDAKUTEN_MAP_K;
+        if (handakutenMap[targetBase]) {
+          finalChar = handakutenMap[targetBase];
+        }
+      } else if (item.type === "small") {
+        const smallMap = item.script === "hiragana" ? SMALL_MAP_H : SMALL_MAP_K;
+        if (smallMap[targetBase]) {
+          finalChar = smallMap[targetBase];
+        }
+      }
+
+      shifted += finalChar;
     }
+
     const countStr = String(step).padStart(2, "0");
     lines.push(`${countStr},${shifted}`);
   }
