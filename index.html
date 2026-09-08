@@ -151,6 +151,24 @@
 const HIRAGANA = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん";
 const KATAKANA = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン";
 
+// 隠しコマンド（天国へ行くための14の言葉）
+const SECRET_WORDS = [
+  "ラセンカイダン",
+  "カブトムシ",
+  "ハイキョノマチ",
+  "イチジクノタルト",
+  "カブトムシ",
+  "ドロローサヘノミチ",
+  "カブトムシ",
+  "トクイテン",
+  "ジョット",
+  "テンシ",
+  "アジサイ",
+  "カブトムシ",
+  "トクイテン",
+  "ヒミツノコウテイ"
+];
+
 // 濁音マップ（清音 -> 濁音）
 const DAKUTEN_MAP_H = {
   "か":"が","き":"ぎ","く":"ぐ","け":"げ","こ":"ご",
@@ -214,7 +232,7 @@ function handleInputChange() {
     clearBtn.style.display = "flex";
   } else {
     clearBtn.style.display = "none";
-    resetDisplay(); // 入力が空になったら初期化
+    resetDisplay();
   }
 }
 
@@ -229,6 +247,23 @@ function clearInput() {
 function executeShift() {
   const input = document.getElementById("targetWord").value.trim();
   if (!input) return;
+
+  // 漢字・アルファベット等の判定（ひらがな、カタカナ、長音符「ー」、スペース以外が含まれるか）
+  const invalidCharPattern = /[^ぁ-んァ-ヶー\s]/;
+  if (invalidCharPattern.test(input)) {
+    document.getElementById("output").value = "ヨクワカリマセン。ヒラガナカ、カタカナデ、オネガイシマス";
+    document.getElementById("copyBtn").style.display = "none";
+    document.getElementById("universeMsg").style.display = "none";
+    return;
+  }
+
+  // 隠しコマンド判定（「プッチ」または「ぷっち」）
+  if (input === "プッチ" || input === "ぷっち") {
+    document.getElementById("output").value = SECRET_WORDS.join("\n");
+    document.getElementById("copyBtn").style.display = "block";
+    document.getElementById("universeMsg").style.display = "block";
+    return;
+  }
 
   const parsedChars = [];
   for (const char of input) {
